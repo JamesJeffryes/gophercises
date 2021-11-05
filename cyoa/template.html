@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{.Title}}</title>
+</head>
+<body>
+<h2>{{.Title}}</h2>
+{{range .Story}}
+<p>{{.}}</p>
+{{end}}
+{{if not .Options}}
+<p><a href="intro">Return to the start</a></p>
+{{end}}
+{{range .Options}}
+<p><a href="{{.Arc}}">{{.Text}}</a></p>
+{{end}}
+</body>
+</html>
