@@ -14,6 +14,8 @@ import (
 	"github.com/jamesjeffryes/gophercises/quiet_hn/hn"
 )
 
+var storyCache []item
+
 func main() {
 	// parse flags
 	var port, numStories, workers int
@@ -23,37 +25,45 @@ func main() {
 	flag.Parse()
 
 	tpl := template.Must(template.ParseFiles("./index.gohtml"))
-
-	http.HandleFunc("/", handler(numStories, tpl, workers))
+	err := updateCache(numStories, 5)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	go runCache(numStories, 1*time.Minute, 5)
+	http.HandleFunc("/", handler(tpl))
 
 	// Start the server
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
 }
 
-func handler(numStories int, tpl *template.Template, workers int) http.HandlerFunc {
-	var stories []item
-	maxCacheAge := 1 * time.Minute
-	var cacheTime time.Time
+func runCache(numStories int, maxCacheAge time.Duration, workers int) {
+	for _ = range time.Tick(maxCacheAge) {
+		err := updateCache(numStories, workers)
+		if err != nil {
+			log.Println(err)
+		}
+		return
+	}
+}
+
+func updateCache(numStories int, workers int) error {
+	var client hn.Client
+	ids, err := client.TopItems()
+	if err != nil {
+		return err
+	}
+	storyCache = GetStories(numStories, ids, client, workers)
+	return nil
+}
+
+func handler(tpl *template.Template) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		var client hn.Client
-		ids, err := client.TopItems()
-		if err != nil {
-			http.Error(w, "Failed to load top stories", http.StatusInternalServerError)
-			return
-		}
-
-		if time.Since(cacheTime) > maxCacheAge {
-			stories = GetStories(numStories, ids, client, workers)
-			cacheTime = time.Now()
-		} else {
-			log.Println("Loaded cached stories")
-		}
 		data := templateData{
-			Stories: stories,
+			Stories: storyCache,
 			Time:    time.Now().Sub(start),
 		}
-		err = tpl.Execute(w, data)
+		err := tpl.Execute(w, data)
 		if err != nil {
 			http.Error(w, "Failed to process the template", http.StatusInternalServerError)
 			return
