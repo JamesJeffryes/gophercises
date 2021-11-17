@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Transform Image with Primitive</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <style>
+        .card{
+            border-radius: 4px;
+            background: #fff;
+            box-shadow: 0 6px 10px rgba(0,0,0,.08), 0 0 6px rgba(0,0,0,.05);
+            transition: .3s transform cubic-bezier(.155,1.105,.295,1.12),.3s box-shadow,.3s -webkit-transform cubic-bezier(.155,1.105,.295,1.12);
+            cursor: pointer;
+        }
+
+        .card:hover{
+            transform: scale(1.05);
+            box-shadow: 0 10px 20px rgba(0,0,0,.12), 0 4px 8px rgba(0,0,0,.06);
+        }
+    </style>
+</head>
+<body>
+{{define "output"}}
+<div class="row">
+    {{ range .Options }}
+        <div class="col-3" onclick="window.location = setParam('{{ $.Step }}', '{{ .Name }}')">
+            <div class="card mb-3">
+                <h3 class="text-center card-header">{{ .Name }} </h3>
+                <div class="card-body d-flex justify-content-center">
+                    <img src="{{ .Url }}" width="100%">
+                </div>
+            </div>
+        </div>
+    {{ end}}
+</div>
+{{end}}
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">Primitive image maker</a>
+        <div id="spinner" class="spinner-border text-light float-end" role="status" style="display: none;">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+</nav>
+<div class="container mt-3">
+    {{ if eq .Step "selected" }}
+        <img src="{{(index .Options 0).Url }}" width="100%">
+    {{ else if eq .Step "shape" }}
+        <h2>Select a fill shape</h2>
+        {{template "output" .}}
+    {{ else if eq .Step "number" }}
+        <h2>Select the Number of Shapes</h2>
+        {{template "output" .}}
+    {{ else }}
+    <h2>Please upload an image file to process</h2>
+    <form enctype="multipart/form-data" action="/upload" method="post">
+        <div class="input-group">
+            <input class="form-control" name="imgFile" type="file" accept="image/png, image/jpeg" required>
+            <button class="btn btn-outline-secondary" type="submit">Upload</button>
+        </div>
+    </form>
+    {{if .Options}}
+        <div class="m-3 d-flex justify-content-center">
+            <img src="{{(index .Options 0).Url }}">
+        </div>
+        <button class="btn btn-block btn-primary" onclick="slowRedirect(`/select/?img=${encodeURIComponent({{(index .Options 0).Url }})}`)">Continue</button>
+    {{end}}
+    {{ end }}
+</div>
+</body>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+<script>
+    function setParam(key, val) {
+        const url = new URL(window.location);
+        const search_params = url.searchParams;
+        search_params.set(key, val);
+        url.search = search_params.toString();
+        return url.toString();
+    }
+    function slowRedirect(url) {
+        document.getElementById('spinner').style.display = 'block';
+        console.log(url)
+        window.location = url
+    }
+</script>
+</html>
